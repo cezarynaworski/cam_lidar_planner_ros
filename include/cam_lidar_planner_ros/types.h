@@ -11,6 +11,12 @@ struct GenericParams {
     
 };
 
+struct ControllerParams {
+    int ROS_Loop_Rate_Hz = 10;
+    float goal_timeout_sec = 20.0f;
+
+};
+
 struct RobotState {
     float x;           
     float y;           
@@ -27,7 +33,7 @@ struct ControlOutput {
 };
 
 
-struct DWAParams {
+struct DWAParams : public GenericParams {
     // Robot constraints
     float max_velocity = 0.2f;
     float max_acceleration = 0.08f;
@@ -39,7 +45,7 @@ struct DWAParams {
     float sampling_period = 0.25f;
     float velocity_sampling_step = 0.02f;
     float angular_velocity_sampling_step = 0.0625f * 3.14159f;
-    float position_accuracy = 0.15f;
+    //float position_accuracy = 0.15f;
     
     // Cost weights
     float heading_weight = 0.9f;
@@ -51,14 +57,14 @@ struct DWAParams {
 };
 
 
-struct APFParams {
+struct APFParams : public GenericParams {
     float att_coefficient = 1.1547f;
     float rep_coefficient = 0.732f;
     float range = 0.35f;
     float range_cam = 0.6f;
     float goal_maximum_distance = 0.3f;
     float position_toleration = 0.1f;
-    float position_accuracy = 0.2f;
+    //float position_accuracy = 0.2f;
 
     // Controller limits
     float omega_max = 0.2f * 3.14159f;

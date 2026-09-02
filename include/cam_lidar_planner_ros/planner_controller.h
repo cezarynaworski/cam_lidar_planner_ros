@@ -12,8 +12,7 @@ class PlannerController
 
     public:
         std::unique_ptr<LocalPlanner> planner;
-        int ROS_Loop_Rate_Hz = 10;
-        float goal_timeout_sec = 20.0f;
+        ControllerParams params;
         
         PlannerController(ros::NodeHandle &nh, const std::string &planner_type);
         void ChangePlanner(ros::NodeHandle &nh, const std::string &planner_type);

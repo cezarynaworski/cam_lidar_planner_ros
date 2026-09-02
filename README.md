@@ -78,8 +78,6 @@ target_link_libraries(my_node ${catkin_LIBRARIES})
 
 ## Usage
 
-This package is a **library** — you must link it in your own node:
-
 ```cpp
 #include "cam_lidar_planner_ros/planner_controller.h"
 
@@ -89,7 +87,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // Pick "APF" or "DWA"
-    CLP::PlannerController planner(nh, "DWA");
+    CLP::PlannerController planner_controller(nh, "DWA");
 
     // Optional: timeout for each GoToGoal call (default: 10.0 s)
     planner.goal_timeout_sec = 10.0f;
@@ -116,124 +114,33 @@ int main(int argc, char **argv)
 
 ## Changing parameters
 
-All parameters have defaults in `include/cam_lidar_planner_ros/types.h`. You can change them after creating the planner by casting to the concrete type:
+All parameters have defaults in `include/cam_lidar_planner_ros/types.h`. 
+There are two types of parameters. Generic and algotitm specific.
+
+
+If you need to change algorithm-specific parameters on the fly you need to dynamic cast planner pointer to APF or DWA class. 
 
 ```cpp
-CLP::PlannerController planner(nh, "DWA");
-
+CLP::PlannerController planner_controller(nh, "DWA");
+// Change generic parameter
+planner_controller.planner->params.position_accuracy=0.1; 
 // Change DWA parameters
-auto *dwa = dynamic_cast<CLP::DWA *>(planner.planner.get());
+auto *dwa = dynamic_cast<CLP::DWA *>(planner_controller.planner.get());
 if (dwa)
 {
     dwa->params.max_velocity = 0.3f;
-    dwa->params.obstacle_distance = 0.25f;
-
-    // DWA LIDAR filter 
-    dwa->lidar_params.max_range = 1.0f;
 }
 ```
 
-```cpp
-CLP::PlannerController planner(nh, "APF");
-
-// Change APF parameters
-auto *apf = dynamic_cast<CLP::APF *>(planner.planner.get());
-if (apf)
-{
-    apf->params.att_coefficient = 1.5f;
-    apf->params.v_max = 0.15f;
-}
-```
-
-You can also change the goal-reached threshold, the control loop rate, and timeout:
+You can also change planner_controller parameters
 
 ```cpp
-planner.planner->generic_params.position_accuracy = 0.1f;  // default: 0.05 m
-planner.ROS_Loop_Rate_Hz = 20;                              // default: 10 Hz
-planner.goal_timeout_sec = 20.0f;                           // default: 20.0 s, <= 0 disables timeout
+ 
+planner.params.ROS_Loop_Rate_Hz = 20;                            
+planner.params.goal_timeout_sec = 20.0f;                           
 ```
 
-### APF parameters — `APFParams`  accessed via `apf->params`
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `att_coefficient` | 1.1547 | How strongly the goal attracts the robot |
-| `rep_coefficient` | 0.732 | How strongly obstacles repel the robot |
-| `range` | 0.35 m | LIDAR obstacles closer than this generate repulsion |
-| `range_cam` | 0.6 m | Camera obstacles closer than this generate repulsion |
-| `goal_maximum_distance` | 0.3 m | Attractive force is clamped beyond this distance |
-| `position_toleration` | 0.1 m | Stop computing forces when this close to goal |
-| `position_accuracy` | 0.2 m | Internal goal-reached check inside `compute()` |
-| `v_max` | 0.2 m/s | Max linear speed |
-| `omega_max` | 0.2π rad/s | Max angular speed |
-| `error_theta_max` | π/4 rad | Heading error above which forward motion is reduced to zero |
-
-### DWA parameters — `DWAParams` accessed via `dwa->params`
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `max_velocity` | 0.2 m/s | Max linear speed |
-| `max_acceleration` | 0.08 m/s² | Linear acceleration limit |
-| `max_angular_velocity` | 0.4375π rad/s | Max angular speed |
-| `max_angular_acceleration` | 1.5π rad/s² | Angular acceleration limit |
-| `prediction_time` | 1.0 s | How far ahead to simulate trajectories |
-| `sampling_period` | 0.25 s | Time step in trajectory simulation |
-| `velocity_sampling_step` | 0.02 m/s | Resolution when sampling linear speeds |
-| `angular_velocity_sampling_step` | 0.0625π rad/s | Resolution when sampling angular speeds |
-| `position_accuracy` | 0.15 m | Internal goal-reached check inside `compute()` |
-| `heading_weight` | 0.9 | Score weight for pointing toward the goal |
-| `distance_weight` | 20.0 | Score weight for obstacle clearance |
-| `velocity_weight` | 150.0 | Score weight for going faster |
-| `obstacle_distance` | 0.2 m | Minimum distance to obstacle before a trajectory is rejected |
-
-### DWA LIDAR filter — `LidarParams` accessed via `dwa->lidar_params`
-
-Used by DWA to filter valid scan readings before trajectory collision checking. Not used by APF.
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `min_range` | 0.1 m | Scan readings below this are ignored |
-| `max_range` | 0.7 m | Scan readings above this are ignored |
-
-### Camera parameters — `CameraParams` accessed via `planner->cam_params`
-
-
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `camera_height` | 0.22 m | Camera height above ground |
-| `min_floor_height` | 0.03 m | Points below this height are treated as floor and ignored |
-| `max_height` | 1.0 m | Points above this height are ignored |
-| `min_depth` | 0.1 m | Minimum valid depth reading |
-| `max_depth` | 0.7 m | Maximum valid depth reading (APF constructor overrides this to 1.5 m) |
-| `depth_image_encoding` | `"32FC1"` | Image encoding|
-
-### General
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `position_accuracy` | 0.05 m | How close to the goal counts as "reached" |
-| `ROS_Loop_Rate_Hz` | 10 Hz | Control loop frequency |
-| `goal_timeout_sec` | 10.0 s | Max time for a single `GoToGoal` call (`<= 0` means no timeout) |
-
-
-## Project structure
-
-```
-include/cam_lidar_planner_ros/
-  types.h                # All parameter structs
-  utils.h                # Math helpers
-  local_planner.h        # Abstract base class
-  APF.h / DWA.h          # Algorithm headers
-  ObstacleMemoryCam.h    # Camera obstacle memory
-  planner_controller.h   # High-level controller
-src/
-  local_planner.cpp      # ROS setup, depth processing, callbacks
-  APF.cpp                # Potential fields + LIDAR clustering
-  DWA.cpp                # Trajectory sampling + scoring
-  ObstacleMemoryCam.cpp  # Memory update logic
-  planner_controller.cpp # Factory + GoToGoal loop
-```
 
 ## License
 

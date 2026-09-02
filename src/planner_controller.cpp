@@ -27,7 +27,7 @@ namespace CLP
         planner->goal_y = y;
         ROS_INFO("Goal set to: (%f, %f)", x, y);
 
-        ros::Rate loop_rate(ROS_Loop_Rate_Hz);
+        ros::Rate loop_rate(params.ROS_Loop_Rate_Hz);
         while (!(planner->firstinitIm && planner->firstinitLIDAR && planner->firstinitInfo))
         {
             ROS_WARN("Waiting for all sensors to initialize...");
@@ -40,19 +40,19 @@ namespace CLP
 
             while (ros::ok())
             {
-                if (CLP::hypot(planner->state.x - x, planner->state.y - y) <= planner->generic_params.position_accuracy)
+                if (CLP::hypot(planner->state.x - x, planner->state.y - y) <= planner->params.position_accuracy)
                 {
 
                     ROS_INFO("Goal reached: (%f, %f)", planner->state.x, planner->state.y);
                     return 0; // Success
                 }
 
-                if (goal_timeout_sec > 0.0f && (ros::Time::now() - start_time).toSec() >= goal_timeout_sec)
+                if (params.goal_timeout_sec > 0.0f && (ros::Time::now() - start_time).toSec() >= params.goal_timeout_sec)
                 {
                     geometry_msgs::Twist stop_msg;
                     planner->ctr_pub.publish(stop_msg);
 
-                    ROS_ERROR("Goal timeout after %.2f s for target (%f, %f)", goal_timeout_sec, x, y);
+                    ROS_ERROR("Goal timeout after %.2f s for target (%f, %f)", params.goal_timeout_sec, x, y);
                     throw std::runtime_error("GoToGoal timeout: target was not reached in configured time limit.");
                 }
 
